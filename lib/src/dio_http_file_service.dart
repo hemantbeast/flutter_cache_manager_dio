@@ -6,28 +6,25 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'mime_extension.dart';
 
 class DioHttpFileService extends FileService {
+  DioHttpFileService(this._dio);
   final Dio _dio;
 
-  DioHttpFileService(this._dio);
-
   @override
-  Future<FileServiceResponse> get(String url,
-      {Map<String, String>? headers}) async {
-    Options options =
-        Options(headers: headers ?? {}, responseType: ResponseType.stream);
+  Future<FileServiceResponse> get(String url, {Map<String, String>? headers}) async {
+    final options = Options(
+      headers: headers ?? {},
+      responseType: ResponseType.stream,
+    );
 
-    Response<ResponseBody> httpResponse =
-        await _dio.get<ResponseBody>(url, options: options);
-
+    final httpResponse = await _dio.get<ResponseBody>(url, options: options);
     return DioGetResponse(httpResponse);
   }
 }
 
 class DioGetResponse implements FileServiceResponse {
+  DioGetResponse(this._response);
   final DateTime _receivedTime = DateTime.now();
   final Response<ResponseBody> _response;
-
-  DioGetResponse(this._response);
 
   @override
   Stream<List<int>> get content => _response.data!.stream;
@@ -41,8 +38,8 @@ class DioGetResponse implements FileServiceResponse {
   @override
   String get fileExtension {
     var fileExtension = '';
-    final contentTypeHeader =
-        _response.headers[Headers.contentTypeHeader]?.first;
+    final contentTypeHeader = _response.headers[Headers.contentTypeHeader]?.first;
+
     if (contentTypeHeader != null) {
       final contentType = ContentType.parse(contentTypeHeader);
       fileExtension = mimeTypes[contentType.mimeType]!;
@@ -58,15 +55,18 @@ class DioGetResponse implements FileServiceResponse {
     // Without a cache-control header we keep the file for a week
     var ageDuration = const Duration(days: 7);
     final controlHeader = _response.headers['cache-control']?.first;
+
     if (controlHeader != null) {
       final controlSettings = controlHeader.split(',');
+
       for (final setting in controlSettings) {
         final sanitizedSetting = setting.trim().toLowerCase();
+
         if (sanitizedSetting == 'no-cache') {
-          ageDuration = const Duration();
+          ageDuration = Duration.zero;
         }
         if (sanitizedSetting.startsWith('max-age=')) {
-          var validSeconds = int.tryParse(sanitizedSetting.split('=')[1]) ?? 0;
+          final validSeconds = int.tryParse(sanitizedSetting.split('=')[1]) ?? 0;
           if (validSeconds > 0) {
             ageDuration = Duration(seconds: validSeconds);
           }
@@ -79,8 +79,7 @@ class DioGetResponse implements FileServiceResponse {
 
   int _getContentLength() {
     try {
-      return int.parse(
-          _response.headers[Headers.contentLengthHeader]?.first ?? '-1');
+      return int.parse(_response.headers[Headers.contentLengthHeader]?.first ?? '-1');
     } catch (e) {
       return -1;
     }
